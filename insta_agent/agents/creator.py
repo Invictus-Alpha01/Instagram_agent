@@ -23,13 +23,16 @@ Write one visual_style sentence that locks lighting, lens, color, and era for th
 
 class Creator:
     """Writes the post, then revises only the slides the visual editor rejected."""
+    print("Creator is initializing_1")
 
     def __init__(self, service: OpenRouterService, settings: Settings):
         self._service = service
         self._settings = settings
+        print("Creator is initialized_2")   
 
     def draft(self, brief: ContentBrief) -> CarouselDraft:
         logger.info("Creator is writing %s slides.", self._settings.carousel_slides)
+        print(f"Creator is writing slides_3{self._settings.carousel_slides}{brief.model_dump()}")
         return self._write("Write the carousel for this brief.", brief, current=None, review=None)
 
     def revise(self, brief: ContentBrief, current: CarouselDraft, review: VisualReview) -> CarouselDraft:
