@@ -8,7 +8,7 @@ import logging
 from insta_agent.agents.support import request_model
 from insta_agent.config import Settings
 from insta_agent.models import ContentBrief, PastPost
-from insta_agent.services.openai_service import OpenAIService
+from insta_agent.services.openrouter_service import OpenRouterService
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ Return exactly the requested number of slides. Slide 1 is the hook. The last sli
 class Analyst:
     """Chooses the next carousel's theme and the line each slide must deliver."""
 
-    def __init__(self, service: OpenAIService, settings: Settings):
+    def __init__(self, service: OpenRouterService, settings: Settings):
         self._service = service
         self._settings = settings
 
@@ -44,7 +44,7 @@ class Analyst:
         )
         brief = request_model(
             self._service,
-            model=self._settings.openai_text_model,
+            model=self._settings.text_model,
             system=_SYSTEM,
             user=user,
             response_format=ContentBrief,

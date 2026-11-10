@@ -3,7 +3,7 @@
 This program publishes one Instagram carousel on a schedule. Three agents run in order, and the third one can stop a post from going out.
 
 1. **Analyst** reads saved post performance (likes, comments, and insights such as reach, saves, and shares) and chooses the line each slide must deliver.
-2. **Creator** writes the caption, the on-slide headline and body, and a photograph prompt per slide. Flux generates the photographs. Headlines are drawn onto the photos in code, because image models still render words unreliably.
+2. **Creator** writes the caption, the on-slide headline and body, and a photograph prompt per slide. OpenRouter generates the photographs. Headlines are drawn onto the photos in code, because image models still render words unreliably.
 3. **Visual editor** looks at the finished slides. Publishing runs only after this agent approves the set. A rejected carousel is revised and checked again, up to `MAX_QA_RETRIES`.
 
 Each run is saved under `output/<timestamp>/` with the JPEGs, `caption.txt`, the brief, and `manifest.json`.
@@ -21,8 +21,7 @@ copy .env.example .env
 
 Edit `.env`. These values start as placeholders:
 
-- `OPENAI_API_KEY` — analyst, creator, and visual editor
-- `FLUX_API_KEY` — Black Forest Labs image generation
+- `OPENROUTER_API_KEY` — analyst, creator, visual editor, and photograph generation
 - `INSTAGRAM_ACCESS_TOKEN` and `INSTAGRAM_ACCOUNT_ID` — the professional Instagram account you own
 
 Also replace `ACCOUNT_NICHE` with what the account actually posts about. `POST_DRY_RUN` defaults to `true`, so a run will not publish until you set it to `false` or pass `--publish`.
@@ -45,7 +44,7 @@ python -m insta_agent publish output\20261109T120000Z
 
 `refresh` stores recent posts in `data/performance.json`. The analyst uses that file on the next run. `schedule` posts every `POST_INTERVAL_HOURS` (minimum 1, default 24) and starts the first run immediately. Stop it with Ctrl+C.
 
-`run --dry-run` still calls OpenAI and Flux. It saves an approved carousel and does not upload it. `publish` sends an already approved folder. It refuses a folder the visual editor rejected, and it refuses files that were swapped after the check.
+`run --dry-run` still calls OpenRouter. It saves an approved carousel and does not upload it. `publish` sends an already approved folder. It refuses a folder the visual editor rejected, and it refuses files that were swapped after the check.
 
 ## Instagram
 

@@ -1,4 +1,4 @@
-"""Turn a Flux photograph and the creator's lines into a 4:5 carousel slide."""
+"""Turn a generated photograph and the creator's lines into a 4:5 carousel slide."""
 
 from __future__ import annotations
 

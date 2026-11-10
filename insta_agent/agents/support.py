@@ -8,13 +8,13 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from insta_agent.errors import AgentError
-from insta_agent.services.openai_service import OpenAIService
+from insta_agent.services.openrouter_service import OpenRouterService
 
 T = TypeVar("T", bound=BaseModel)
 
 
 def request_model(
-    service: OpenAIService,
+    service: OpenRouterService,
     *,
     model: str,
     system: str,
@@ -52,7 +52,7 @@ def request_model(
             feedback = str(exc)[:1500]
         except AgentError as exc:
             text = str(exc)
-            if text.startswith("OpenAI request failed") or text.startswith("Could not reach"):
+            if text.startswith("OpenRouter request failed") or text.startswith("Could not reach"):
                 raise
             last_error = exc
             feedback = text[:1500]

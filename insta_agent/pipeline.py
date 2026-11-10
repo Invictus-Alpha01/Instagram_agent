@@ -17,22 +17,18 @@ from insta_agent.config import Settings
 from insta_agent.errors import AgentError, PublishError, RejectedError
 from insta_agent.models import CarouselDraft, PastPost, SlideRecord, SlideReview, VisualReview
 from insta_agent.render import open_image, render_slide, save_jpeg
-from insta_agent.services.flux_service import FluxService
 from insta_agent.services.image_host import CatboxHost, ImageHost, PublicDirHost
 from insta_agent.services.instagram_service import InstagramService
-from insta_agent.services.openai_service import OpenAIService
+from insta_agent.services.openrouter_service import OpenRouterService
 from insta_agent.storage.performance import PerformanceStore
 
 logger = logging.getLogger(__name__)
 
-_FATAL_FLUX = (
-    "Could not reach Flux",
-    "Flux polling failed",
-    "Flux did not finish",
-    "Flux rejected the request (401)",
-    "Flux rejected the request (403)",
-    "Flux did not return a polling_url",
-    "Could not download the Flux image",
+_FATAL_IMAGE = (
+    "Could not reach OpenRouter",
+    "OpenRouter image request failed",
+    "OpenRouter returned no image",
+    "OpenRouter image was larger than 15MB",
 )
 
 
@@ -43,14 +39,13 @@ def run_cycle(settings: Settings, *, dry_run: bool) -> Path:
     if dry_run:
         logger.info("Dry run: the carousel will be checked and saved, then left unpublished.")
     store = PerformanceStore(settings.performance_path)
-    openai_service = OpenAIService(settings)
-    flux = FluxService(settings)
+    openrouter = OpenRouterService(settings)
     instagram = InstagramService(settings) if settings.instagram_ready else None
     try:
         history = _refresh_history(store, instagram)
-        analyst = Analyst(openai_service, settings)
-        creator = Creator(openai_service, settings)
-        visual_qa = VisualQA(openai_service, settings)
+        analyst = Analyst(openrouter, settings)
+        creator = Creator(openrouter, settings)
+        visual_qa = VisualQA(openrouter, settings)
         brief = analyst.decide(history)
         draft = creator.draft(brief)
         run_dir = _new_run_dir(settings)
@@ -60,7 +55,7 @@ def run_cycle(settings: Settings, *, dry_run: bool) -> Path:
         slide_paths: list[Path] = []
         for attempt in range(settings.max_qa_retries + 1):
             slide_paths, failures = _materialize(
-                settings, flux, run_dir, draft, backgrounds, prompts
+                settings, openrouter, run_dir, draft, backgrounds, prompts
             )
             if failures:
                 review = _local_rejection(draft, failures)
@@ -88,8 +83,7 @@ def run_cycle(settings: Settings, *, dry_run: bool) -> Path:
         _publish_directory(settings, store, instagram, run_dir)
         return run_dir
     finally:
-        openai_service.close()
-        flux.close()
+        openrouter.close()
         if instagram is not None:
             instagram.close()
 
@@ -129,7 +123,7 @@ def _refresh_history(store: PerformanceStore, instagram: InstagramService | None
 
 def _materialize(
     settings: Settings,
-    flux: FluxService,
+    openrouter: OpenRouterService,
     run_dir: Path,
     draft: CarouselDraft,
     backgrounds: dict[int, Image.Image],
@@ -143,16 +137,16 @@ def _materialize(
         if prompts.get(index) != prompt:
             logger.info("Generating photograph %s of %s.", index, total)
             try:
-                data = flux.generate(prompt, slide_index=index)
+                data = openrouter.generate_image(prompt, slide_index=index)
                 backgrounds[index] = open_image(data)
             except AgentError as exc:
                 message = str(exc)
-                if message.startswith(_FATAL_FLUX) or message.startswith("Flux rejected the request"):
+                if message.startswith(_FATAL_IMAGE):
                     raise
                 failures[index] = message
                 continue
             except (UnidentifiedImageError, OSError) as exc:
-                failures[index] = f"Flux returned an unreadable image: {exc}"
+                failures[index] = f"OpenRouter returned an unreadable image: {exc}"
                 continue
             prompts[index] = prompt
             save_jpeg(backgrounds[index], run_dir / f"background_{index:02d}.jpg")
@@ -321,9 +315,9 @@ def _write_package(
         "instagram_media_id": None,
         "permalink": "",
         "models": {
-            "text": settings.openai_text_model,
-            "vision": settings.openai_vision_model,
-            "flux": settings.flux_model,
+            "text": settings.text_model,
+            "vision": settings.vision_model,
+            "image": settings.image_model,
         },
         "summary": review.summary,
         "slides": slides,

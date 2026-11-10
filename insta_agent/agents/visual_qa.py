@@ -12,7 +12,7 @@ from PIL import Image
 from insta_agent.agents.support import request_model
 from insta_agent.config import Settings
 from insta_agent.models import CarouselDraft, ContentBrief, SlideReview, VisualReview
-from insta_agent.services.openai_service import OpenAIService
+from insta_agent.services.openrouter_service import OpenRouterService
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ Approve the carousel only when every slide passes and the slides look like one s
 class VisualQA:
     """Reviews the finished JPEGs. Publishing happens only after this agent approves."""
 
-    def __init__(self, service: OpenAIService, settings: Settings):
+    def __init__(self, service: OpenRouterService, settings: Settings):
         self._service = service
         self._settings = settings
 
@@ -54,7 +54,7 @@ class VisualQA:
         )
         result = request_model(
             self._service,
-            model=self._settings.openai_vision_model,
+            model=self._settings.vision_model,
             system=_SYSTEM,
             user=user,
             response_format=VisualReview,

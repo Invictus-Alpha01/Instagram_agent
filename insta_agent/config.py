@@ -60,13 +60,14 @@ def _float(name: str, default: float) -> float:
 class Settings:
     """Runtime settings. Secrets stay on the instance and are never logged."""
 
-    openai_api_key: str
-    openai_text_model: str
-    openai_vision_model: str
-    flux_api_key: str
-    flux_model: str
-    flux_api_base: str
-    flux_seed: int | None
+    openrouter_api_key: str
+    openrouter_api_base: str
+    text_model: str
+    vision_model: str
+    image_model: str
+    image_seed: int | None
+    image_aspect_ratio: str
+    image_resolution: str
     instagram_access_token: str
     instagram_account_id: str
     graph_api_base: str
@@ -83,28 +84,27 @@ class Settings:
     image_public_base_url: str
     output_dir: Path
     performance_path: Path
-    flux_width: int = 896
-    flux_height: int = 1120
 
     @classmethod
     def load(cls) -> Settings:
         load_dotenv(ROOT / ".env")
         public_dir = _env("IMAGE_PUBLIC_DIR")
-        seed_raw = _env("FLUX_SEED")
+        seed_raw = _env("IMAGE_SEED")
         seed: int | None = None
         if seed_raw:
             try:
                 seed = int(seed_raw)
             except ValueError as exc:
-                raise ConfigError("FLUX_SEED must be an integer.") from exc
+                raise ConfigError("IMAGE_SEED must be an integer.") from exc
         settings = cls(
-            openai_api_key=_env("OPENAI_API_KEY"),
-            openai_text_model=_env("OPENAI_TEXT_MODEL", "gpt-4o-mini"),
-            openai_vision_model=_env("OPENAI_VISION_MODEL", "gpt-4o"),
-            flux_api_key=_env("FLUX_API_KEY"),
-            flux_model=_env("FLUX_MODEL", "flux-pro-1.1"),
-            flux_api_base=_env("FLUX_API_BASE", "https://api.bfl.ai/v1"),
-            flux_seed=seed,
+            openrouter_api_key=_env("OPENROUTER_API_KEY"),
+            openrouter_api_base=_env("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"),
+            text_model=_env("TEXT_MODEL", "openai/gpt-4o-mini"),
+            vision_model=_env("VISION_MODEL", "openai/gpt-4o"),
+            image_model=_env("IMAGE_MODEL", "black-forest-labs/flux.2-pro"),
+            image_seed=seed,
+            image_aspect_ratio=_env("IMAGE_ASPECT_RATIO", "4:5"),
+            image_resolution=_env("IMAGE_RESOLUTION", "1K"),
             instagram_access_token=_env("INSTAGRAM_ACCESS_TOKEN"),
             instagram_account_id=_env("INSTAGRAM_ACCOUNT_ID"),
             graph_api_base=_env("GRAPH_API_BASE", "https://graph.facebook.com/v27.0"),
@@ -135,10 +135,8 @@ class Settings:
         """Names of settings that would stop this run."""
 
         missing: list[str] = []
-        if is_placeholder(self.openai_api_key):
-            missing.append("OPENAI_API_KEY")
-        if is_placeholder(self.flux_api_key):
-            missing.append("FLUX_API_KEY")
+        if is_placeholder(self.openrouter_api_key):
+            missing.append("OPENROUTER_API_KEY")
         if is_placeholder(self.account_niche):
             missing.append("ACCOUNT_NICHE")
         if not dry_run and is_placeholder(self.instagram_access_token):
@@ -170,5 +168,13 @@ class Settings:
             raise ConfigError("MAX_QA_RETRIES cannot be negative.")
         if self.image_host not in {"catbox", "public_dir"}:
             raise ConfigError("IMAGE_HOST must be catbox or public_dir.")
-        if self.flux_seed is not None and self.flux_seed < 0:
-            raise ConfigError("FLUX_SEED must be a positive integer.")
+        if self.image_seed is not None and self.image_seed < 0:
+            raise ConfigError("IMAGE_SEED must be a positive integer.")
+        if self.image_aspect_ratio != "auto" and ":" not in self.image_aspect_ratio:
+            raise ConfigError("IMAGE_ASPECT_RATIO must look like 4:5, or be auto.")
+        if not self.image_resolution:
+            raise ConfigError("IMAGE_RESOLUTION cannot be empty.")
+        if not self.text_model or not self.vision_model or not self.image_model:
+            raise ConfigError("TEXT_MODEL, VISION_MODEL, and IMAGE_MODEL must be set.")
+        if not self.openrouter_api_base.startswith("https://"):
+            raise ConfigError("OPENROUTER_API_BASE must start with https://.")

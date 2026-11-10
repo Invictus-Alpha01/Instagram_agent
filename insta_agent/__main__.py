@@ -98,8 +98,7 @@ def _dry_run(settings: Settings, args: argparse.Namespace) -> bool:
 def _check(settings: Settings) -> int:
     dry_run = settings.post_dry_run
     rows = [
-        ("OPENAI_API_KEY", settings.openai_api_key),
-        ("FLUX_API_KEY", settings.flux_api_key),
+        ("OPENROUTER_API_KEY", settings.openrouter_api_key),
         ("INSTAGRAM_ACCESS_TOKEN", settings.instagram_access_token),
         ("INSTAGRAM_ACCOUNT_ID", settings.instagram_account_id),
         ("ACCOUNT_NICHE", settings.account_niche),
@@ -107,9 +106,9 @@ def _check(settings: Settings) -> int:
     for name, value in rows:
         state = "placeholder" if is_placeholder(value) else "set"
         print(f"{name}: {state}")
-    print(f"text model: {settings.openai_text_model}")
-    print(f"vision model: {settings.openai_vision_model}")
-    print(f"flux model: {settings.flux_model}")
+    print(f"text model: {settings.text_model}")
+    print(f"vision model: {settings.vision_model}")
+    print(f"image model: {settings.image_model}")
     print(f"slides: {settings.carousel_slides}")
     print(f"interval hours: {settings.post_interval_hours}")
     print(f"dry run: {dry_run}")
@@ -134,7 +133,6 @@ def _configure_logging(verbose: bool) -> None:
         datefmt="%H:%M:%S",
     )
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("openai").setLevel(logging.WARNING)
     logging.getLogger("apscheduler").setLevel(logging.INFO)
 
 
